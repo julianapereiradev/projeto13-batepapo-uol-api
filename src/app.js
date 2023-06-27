@@ -38,9 +38,9 @@ app.post("/participants", (req,res) => {
 })
 
 
-// app.get("/participants", (req, res) => {
-//    res.send(participants)
-// })
+app.get("/participants", (req, res) => {
+   res.send(participants)
+})
 
 // Ligar a aplicação do servidos para ouvir as requisições:
 const PORT = 5000
