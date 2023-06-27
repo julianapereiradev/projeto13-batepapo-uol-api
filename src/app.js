@@ -10,10 +10,19 @@ app.use(express.json())
 
 
 const participants  = []
+const messages = []
 
-let globalParticipant = {
+let postParticipant = {
     name: "",
     lastStatus: ""
+}
+
+let postMessages = {
+    to: "",
+    text: "",
+    type: "",
+    from: "",
+    time: ""
 }
 
 // Funções (endpoints):
@@ -27,19 +36,53 @@ app.post("/participants", (req,res) => {
         return res.sendStatus(409)
     }
 
-    globalParticipant = {
+    postParticipant = {
         name: name,
         lastStatus: Date.now()
     }
     
-    participants.push(globalParticipant)
-    console.log("Array de globParticipantes:", participants)
-    res.sendStatus(200)
+    participants.push(postParticipant)
+    console.log("Array de postParticipantes:", participants)
+    res.sendStatus(201)
 })
 
 
 app.get("/participants", (req, res) => {
    res.send(participants)
+})
+
+app.post("/messages", (req, res) => {
+    const {to, text, type} = req.body
+    const {usuario} = req.headers
+
+    if(!to || to === "" || !text || text === "") {
+        return res.status(422).send("O to ta string vazia ou o text tá string vazia")
+    }
+    if(!type || type !== "private_message" && type !== "message") {
+        return res.status(422).send("type é diferente de message e de private_message")
+    }
+    if(!usuario) {
+        return res.status(422).send("Usuario não existe")
+    }
+
+    const userExists = participants.find((u) => u.name === usuario)
+    console.log("usuario(user) aqui:", usuario)
+
+    if(!userExists) {
+        return res.status(422).send("O user do header não consta no array de participants")
+    }
+
+    postMessages = {
+        to: "",
+        text: "",
+        type: "",
+        from: usuario,
+        time: "HH:mm:ss"
+    }
+
+    messages.push(postMessages)
+    // console.log("Array de postMessages:", messages)
+    res.sendStatus(201)
 })
 
 // Ligar a aplicação do servidos para ouvir as requisições:
