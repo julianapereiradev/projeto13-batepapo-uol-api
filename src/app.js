@@ -73,9 +73,9 @@ app.post("/messages", (req, res) => {
     }
 
     postMessages = {
-        to: "",
-        text: "",
-        type: "",
+        to: to,
+        text: text,
+        type: type,
         from: User,
         time: "HH:mm:ss"
     }
@@ -83,6 +83,19 @@ app.post("/messages", (req, res) => {
     messages.push(postMessages)
     // console.log("Array de postMessages:", messages)
     res.sendStatus(201)
+})
+
+app.get("/messages", (req, res) => {
+    const limit = Number(req.query.limit)
+
+    if(req.query.limit && (isNaN(limit) || limit < 1) ) {
+        return res.status(422).send("Caso o limite seja um valor inválido (0, negativo ou string não numérica)")
+    }
+    if(limit) {
+        return res.send(messages.slice(-limit))
+    }
+
+    res.send(messages)
 })
 
 // Ligar a aplicação do servidos para ouvir as requisições:
