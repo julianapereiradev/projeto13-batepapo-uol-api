@@ -53,7 +53,7 @@ app.get("/participants", (req, res) => {
 
 app.post("/messages", (req, res) => {
     const {to, text, type} = req.body
-    const {usuario} = req.headers
+    const User = req.headers.user
 
     if(!to || to === "" || !text || text === "") {
         return res.status(422).send("O to ta string vazia ou o text tá string vazia")
@@ -61,12 +61,12 @@ app.post("/messages", (req, res) => {
     if(!type || type !== "private_message" && type !== "message") {
         return res.status(422).send("type é diferente de message e de private_message")
     }
-    if(!usuario) {
+    if(!User) {
         return res.status(422).send("Usuario não existe")
     }
 
-    const userExists = participants.find((u) => u.name === usuario)
-    console.log("usuario(user) aqui:", usuario)
+    const userExists = participants.find((u) => u.name === User)
+    console.log("usuario(user) aqui:", User)
 
     if(!userExists) {
         return res.status(422).send("O user do header não consta no array de participants")
@@ -76,7 +76,7 @@ app.post("/messages", (req, res) => {
         to: "",
         text: "",
         type: "",
-        from: usuario,
+        from: User,
         time: "HH:mm:ss"
     }
 
