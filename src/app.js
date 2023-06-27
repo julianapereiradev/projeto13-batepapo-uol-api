@@ -9,11 +9,38 @@ app.use(cors())
 app.use(express.json())
 
 
+const participants  = []
+
+let globalParticipant = {
+    name: "",
+    lastStatus: ""
+}
+
 // Funções (endpoints):
-app.get("/participants", (req,res) => {
-    res.send("Funcionou!!")
+app.post("/participants", (req,res) => {
+    const {name} = req.body
+
+    if(name === "") {
+        return res.sendStatus(422)
+    }
+    if(participants.find((p) => p.name === name)) {
+        return res.sendStatus(409)
+    }
+
+    globalParticipant = {
+        name: name,
+        lastStatus: Date.now()
+    }
+    
+    participants.push(globalParticipant)
+    console.log("Array de globParticipantes:", participants)
+    res.sendStatus(200)
 })
 
+
+// app.get("/participants", (req, res) => {
+//    res.send(participants)
+// })
 
 // Ligar a aplicação do servidos para ouvir as requisições:
 const PORT = 5000
