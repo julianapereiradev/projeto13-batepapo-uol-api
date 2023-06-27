@@ -66,7 +66,7 @@ app.post("/messages", (req, res) => {
     }
 
     const userExists = participants.find((u) => u.name === User)
-    console.log("usuario(user) aqui:", User)
+    console.log("User de messages aqui:", User)
 
     if(!userExists) {
         return res.status(422).send("O user do header não consta no array de participants")
@@ -96,6 +96,28 @@ app.get("/messages", (req, res) => {
     }
 
     res.send(messages)
+})
+
+app.post("/status", (req, res) => {
+   
+    const User = req.headers.user
+
+      if(!User) {
+        return res.status(404).send("Caso este header não seja passado")
+    }
+
+    const userExists = participants.find((u) => u.name === User)
+    console.log("User de status aqui:", User)
+
+    if(!userExists) {
+        return res.status(404).send("Status 404: Caso este participante não conste na lista de participantes, deve ser retornado um status 404. ")
+    }
+    
+    console.log('userExists antes:',userExists)
+    userExists.lastStatus = Date.now()
+    console.log('userExists depois:',userExists)
+   
+    res.sendStatus(200) 
 })
 
 // Ligar a aplicação do servidos para ouvir as requisições:
