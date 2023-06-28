@@ -20,13 +20,12 @@ mongoClient
   .connect()
   .then(() => (db = mongoClient.db()))
   .catch((err) => console.log(err.message));
-  
 
 const timeFormat = dayjs().format("HH:mm:ss");
 
 
 // Funções (endpoints):
-app.post("/participants", (req, res) => {
+app.post("/participants", async (req, res) => {
   const { name } = req.body;
 
   if (!name || name === "") {
@@ -35,115 +34,84 @@ app.post("/participants", (req, res) => {
       .send("O campo name é obrigatório e não pode ser string vazia");
   }
 
-  const promise = db.collection("participantes").findOne({ name });
+  try{
+  const participantExistsInParticipants = await db.collection("participantes").findOne({ name });
 
-  promise.then((contatoExistente) => {
-    if (contatoExistente) {
-      res.status(409).send("Já existe um participante com o mesmo nome!");
-      return;
-    }
+  if(participantExistsInParticipants) {
+    return res.status(409).send("Já existe um participante com o mesmo nome!");
+  }
 
     const newParticipant = { name, lastStatus: Date.now() };
-    const insertPromise = db
-      .collection("participantes")
-      .insertOne(newParticipant);
-
-    insertPromise.then(() => {
-      const mensagem = {
+    await db.collection("participantes").insertOne(newParticipant);
+    const mensagem = {
         from: name,
         to: "Todos",
         text: "entra na sala...",
         type: "status",
         time: timeFormat,
-      };
+    };
 
-      const insertMensagemPromise = db
-        .collection("mensagens")
-        .insertOne(mensagem);
+    await db.collection("mensagens").insertOne(mensagem);
+    res.sendStatus(201)
 
-      insertMensagemPromise.then(() => {
-        res.sendStatus(201);
-      });
+} catch(err) {
+    return res.status(500).send(err.message)
+}
+}); //MUDEI PARA try/catch
 
-      insertMensagemPromise.catch((err) => {
-        res.status(500).send(err.message);
-      });
-    });
-
-    insertPromise.catch((err) => {
-      res.status(500).send(err.message);
-    });
-  });
-
-  promise.catch((err) => {
-    res.status(500).send(err.message);
-  });
-});
-
-app.get("/participants", (req, res) => {
-  const promise = db.collection("participantes").find().toArray();
-
-  promise.then((data) => {
+app.get("/participants", async (req, res) => {
+  try {
+    const data = await db.collection("participantes").find().toArray();
     return res.send(data);
-  });
-  promise.catch((err) => {
+
+  } catch (err) {
     return res.status(500).send(err.message);
-  });
-});
+  }
+}); //MUDEI PARA try/catch
 
-app.post("/messages", (req, res) => {
-
+app.post("/messages", async (req, res) => {
   const { to, text, type } = req.body;
   const User = req.headers.user;
   console.log("User aqui:", User);
 
-  if (!to || to === "" || !text || text === "") {
-    return res
-      .status(422)
-      .send("O to ta string vazia ou o text tá string vazia");
-  }
-  if (!type || (type !== "private_message" && type !== "message")) {
-    return res
-      .status(422)
-      .send("type é diferente de message e de private_message");
-  }
-  if (!User) {
-    return res.status(422).send("O cabeçalho 'user' é obrigatório.");
-  }
+  try {
+    if (!to || to === "" || !text || text === "") {
+      return res
+        .status(422)
+        .send("O to ta string vazia ou o text tá string vazia");
+    }
+    if (!type || (type !== "private_message" && type !== "message")) {
+      return res
+        .status(422)
+        .send("type é diferente de message e de private_message");
+    }
+    if (!User) {
+      return res.status(422).send("O cabeçalho 'user' é obrigatório.");
+    }
 
-  const promise = db.collection("participantes").findOne({ name: User });
+    const contatoExistente = await db
+      .collection("participantes")
+      .findOne({ name: User });
 
-  promise.then((contatoExistente) => {
     if (!contatoExistente) {
-      res
+      return res
         .status(422)
         .send(
           "O participante do cabeçalho 'user' não consta na lista de participantes."
         );
-      return;
     }
 
     const newMessage = { to, text, type, from: User, time: timeFormat };
-    const insertPromise = db.collection("mensagens").insertOne(newMessage);
-
-    insertPromise.then(() => {
-      res.sendStatus(201);
-    });
-
-    insertPromise.catch((err) => {
-      res.status(500).send(err.message);
-    });
-  });
-
-  promise.catch((err) => {
+    await db.collection("mensagens").insertOne(newMessage);
+    res.sendStatus(201);
+  } catch (err) {
     res.status(500).send(err.message);
-  });
-});
+  }
+}); //MUDEI PARA try/catch
 
-app.get("/messages", (req, res) => {
-  //PARTE DE RETORNAR MENSAGENS QUE USA O OPERADOR $or
 
-  const limit = Number(req.query.limit);
+app.get("/messages", async (req, res) => {
+   const limit = Number(req.query.limit);
 
   if (req.query.limit && (isNaN(limit) || limit < 1)) {
     return res
@@ -153,57 +121,47 @@ app.get("/messages", (req, res) => {
       );
   }
 
-  const promise = db.collection("mensagens").find().toArray();
+  try {
+    const data = await db.collection("mensagens").find().toArray();
 
-  promise.then((data) => {
-    if (limit) {
-      return res.send(data.slice(-limit));
+    if(limit) {
+        return res.send(data.slice(-limit))
     }
 
-    return res.send(data);
-  });
-  promise.catch((err) => {
-    return res.status(500).send(err.message);
-  });
-});
+    return res.send(data)
+  }
 
-app.post("/status", (req, res) => {
+  catch(err) {
+    return res.status(500).send(err.message)
+  }
+}); //MUDEI PARA try/catch
+
+
+app.post("/status", async (req, res) => {
 
   const User = req.headers.user;
+
   if (!User) {
     return res.status(404).send("O cabeçalho 'user' é obrigatório.");
   }
 
-  const promise = db.collection("participantes").findOne({ name: User });
+  try {
+    const participantExistsInStatus = await db.collection("participantes").findOne({ name: User });
 
-  promise.then((contatoExistente) => {
-    if (!contatoExistente) {
-      res
-        .status(404)
-        .send(
-          "O participante do cabeçalho 'user' não consta na lista de participantes."
-        );
-      return;
+    if(!participantExistsInStatus) {
+        return res.status(404).send("O participante do cabeçalho 'user' não consta na lista de participantes.")
     }
- 
-    const promiseUpdate = db.collection("participantes").findOneAndUpdate(
-        { name: User },
-        { $set: { lastStatus: Date.now() } }
-      );
-    
-      promiseUpdate.then(() => {
-        res.status(200).send("Status post feito com sucesso!");
-      });
-    
-      promiseUpdate.catch((err) => {
-        res.status(500).send(err.message);
-      });
-});
 
-  promise.catch((err) => {
-    res.status(500).send(err.message);
-  });
-});
+    await db.collection("participantes").findOneAndUpdate({ name: User }, { $set: { lastStatus: Date.now() } });
+
+    res.sendStatus(200)
+  }
+
+  catch(err){
+    res.status(500).send(err.message)
+  }
+}); //MUDEI PARA try/catch
+
 
 // Ligar a aplicação do servidos para ouvir as requisições:
 const PORT = 5000;
