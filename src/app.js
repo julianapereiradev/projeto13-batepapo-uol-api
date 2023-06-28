@@ -3,6 +3,7 @@ import cors from "cors";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 import dayjs from "dayjs";
+import joi from 'joi'
 
 // Crianção do app:
 const app = express();
@@ -21,17 +22,27 @@ mongoClient
   .then(() => (db = mongoClient.db()))
   .catch((err) => console.log(err.message));
 
+//Dayjs:
 const timeFormat = dayjs().format("HH:mm:ss");
+
+
+//Joi Schemas:
+const participantSchema = joi.object({
+    name: joi.string().required(),
+});
 
 
 // Funções (endpoints):
 app.post("/participants", async (req, res) => {
   const { name } = req.body;
 
-  if (!name || name === "") {
-    return res
-      .status(422)
-      .send("O campo name é obrigatório e não pode ser string vazia");
+  const postParticipant = { name: name }
+
+  const validation = participantSchema.validate(postParticipant, { abortEarly: false });
+
+  if (validation.error) {
+    const errors = validation.error.details.map((detail) => detail.message);
+    return res.status(422).send(errors);
   }
 
   try{
@@ -57,7 +68,7 @@ app.post("/participants", async (req, res) => {
 } catch(err) {
     return res.status(500).send(err.message)
 }
-}); //MUDEI PARA try/catch
+});
 
 app.get("/participants", async (req, res) => {
   try {
@@ -67,7 +78,7 @@ app.get("/participants", async (req, res) => {
   } catch (err) {
     return res.status(500).send(err.message);
   }
-}); //MUDEI PARA try/catch
+});
 
 app.post("/messages", async (req, res) => {
   const { to, text, type } = req.body;
@@ -107,7 +118,7 @@ app.post("/messages", async (req, res) => {
   } catch (err) {
     res.status(500).send(err.message);
   }
-}); //MUDEI PARA try/catch
+});
 
 
 app.get("/messages", async (req, res) => {
@@ -134,7 +145,7 @@ app.get("/messages", async (req, res) => {
   catch(err) {
     return res.status(500).send(err.message)
   }
-}); //MUDEI PARA try/catch
+});
 
 
 app.post("/status", async (req, res) => {
@@ -160,7 +171,7 @@ app.post("/status", async (req, res) => {
   catch(err){
     res.status(500).send(err.message)
   }
-}); //MUDEI PARA try/catch
+});
 
 
 // Ligar a aplicação do servidos para ouvir as requisições:
