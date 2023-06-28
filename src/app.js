@@ -46,14 +46,14 @@ app.post("/participants", async (req, res) => {
   }
 
   try{
-  const participantExistsInParticipants = await db.collection("participantes").findOne({ name });
+  const participantExistsInParticipants = await db.collection("participants").findOne({ name });
 
   if(participantExistsInParticipants) {
     return res.status(409).send("Já existe um participante com o mesmo nome!");
   }
 
     const newParticipant = { name, lastStatus: Date.now() };
-    await db.collection("participantes").insertOne(newParticipant);
+    await db.collection("participants").insertOne(newParticipant);
     const mensagem = {
         from: name,
         to: "Todos",
@@ -62,7 +62,7 @@ app.post("/participants", async (req, res) => {
         time: timeFormat,
     };
 
-    await db.collection("mensagens").insertOne(mensagem);
+    await db.collection("messages").insertOne(mensagem);
     res.sendStatus(201)
 
 } catch(err) {
@@ -72,7 +72,7 @@ app.post("/participants", async (req, res) => {
 
 app.get("/participants", async (req, res) => {
   try {
-    const data = await db.collection("participantes").find().toArray();
+    const data = await db.collection("participants").find().toArray();
     return res.send(data);
 
   } catch (err) {
@@ -101,7 +101,7 @@ app.post("/messages", async (req, res) => {
     }
 
     const contatoExistente = await db
-      .collection("participantes")
+      .collection("participants")
       .findOne({ name: User });
 
     if (!contatoExistente) {
@@ -113,7 +113,7 @@ app.post("/messages", async (req, res) => {
     }
 
     const newMessage = { to, text, type, from: User, time: timeFormat };
-    await db.collection("mensagens").insertOne(newMessage);
+    await db.collection("messages").insertOne(newMessage);
     res.sendStatus(201);
   } catch (err) {
     res.status(500).send(err.message);
@@ -133,7 +133,7 @@ app.get("/messages", async (req, res) => {
   }
 
   try {
-    const data = await db.collection("mensagens").find().toArray();
+    const data = await db.collection("messages").find().toArray();
 
     if(limit) {
         return res.send(data.slice(-limit))
@@ -157,13 +157,13 @@ app.post("/status", async (req, res) => {
   }
 
   try {
-    const participantExistsInStatus = await db.collection("participantes").findOne({ name: User });
+    const participantExistsInStatus = await db.collection("participants").findOne({ name: User });
 
     if(!participantExistsInStatus) {
         return res.status(404).send("O participante do cabeçalho 'user' não consta na lista de participantes.")
     }
 
-    await db.collection("participantes").findOneAndUpdate({ name: User }, { $set: { lastStatus: Date.now() } });
+    await db.collection("participants").findOneAndUpdate({ name: User }, { $set: { lastStatus: Date.now() } });
 
     res.sendStatus(200)
   }
