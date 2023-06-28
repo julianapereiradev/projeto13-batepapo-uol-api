@@ -177,21 +177,20 @@ app.post("/messages", (req, res) => {
 })
 
 app.get("/messages", (req, res) => {
-    // const limit = Number(req.query.limit)
+    const limit = Number(req.query.limit)
 
-    // if(req.query.limit && (isNaN(limit) || limit < 1) ) {
-    //     return res.status(422).send("Caso o limite seja um valor inválido (0, negativo ou string não numérica)")
-    // }
-    // if(limit) {
-    //     return res.send(messages.slice(-limit))
-    // }
-
-    // res.send(messages)
+    if(req.query.limit && (isNaN(limit) || limit < 1) ) {
+        return res.status(422).send("Caso o limite seja um valor inválido (0, negativo ou string não numérica)")
+    }
 
     const promise = db.collection("mensagens").find().toArray()
   
     promise.then(data => {
-      return res.send(data)
+        if(limit) {
+            return res.send(data.slice(-limit))
+        }
+
+        return res.send(data)
     })
     promise.catch(err => {
       return res.status(500).send(err.message)
