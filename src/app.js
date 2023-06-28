@@ -105,8 +105,41 @@ app.get("/participants", (req, res) => {
 })
 
 app.post("/messages", (req, res) => {
-    const {to, text, type} = req.body
+    // const {to, text, type} = req.body
+    // const User = req.headers.user
+
+    // if(!to || to === "" || !text || text === "") {
+    //     return res.status(422).send("O to ta string vazia ou o text tá string vazia")
+    // }
+    // if(!type || type !== "private_message" && type !== "message") {
+    //     return res.status(422).send("type é diferente de message e de private_message")
+    // }
+    // if(!User) {
+    //     return res.status(422).send("Usuario não existe")
+    // }
+
+    // const userExists = participants.find((u) => u.name === User)
+    // console.log("User de messages aqui:", User)
+
+    // if(!userExists) {
+    //     return res.status(422).send("O user do header não consta no array de participants")
+    // }
+
+    // postMessages = {
+    //     to: to,
+    //     text: text,
+    //     type: type,
+    //     from: User,
+    //     time: "HH:mm:ss"
+    // }
+
+    // messages.push(postMessages)
+    // // console.log("Array de postMessages:", messages)
+    // res.sendStatus(201)
+
+    const { to, text, type } = req.body;
     const User = req.headers.user
+    console.log("User aqui:", User)
 
     if(!to || to === "" || !text || text === "") {
         return res.status(422).send("O to ta string vazia ou o text tá string vazia")
@@ -115,27 +148,32 @@ app.post("/messages", (req, res) => {
         return res.status(422).send("type é diferente de message e de private_message")
     }
     if(!User) {
-        return res.status(422).send("Usuario não existe")
+        return res.status(422).send("O cabeçalho 'user' é obrigatório.");
     }
 
-    const userExists = participants.find((u) => u.name === User)
-    console.log("User de messages aqui:", User)
-
-    if(!userExists) {
-        return res.status(422).send("O user do header não consta no array de participants")
-    }
-
-    postMessages = {
-        to: to,
-        text: text,
-        type: type,
-        from: User,
-        time: "HH:mm:ss"
-    }
-
-    messages.push(postMessages)
-    // console.log("Array de postMessages:", messages)
-    res.sendStatus(201)
+    const promise = db.collection("participantes").findOne({ name: User });
+  
+    promise.then((contatoExistente) => {
+      if (!contatoExistente) {
+        res.status(422).send("O participante do cabeçalho 'user' não consta na lista de participantes.");
+        return;
+      }
+  
+      const newMessage = { to, text, type, from: User, time: timeFormat };
+      const insertPromise = db.collection("mensagens").insertOne(newMessage);
+  
+      insertPromise.then(() => {
+        res.sendStatus(201);
+      });
+  
+      insertPromise.catch((err) => {
+        res.status(500).send(err.message);
+      });
+    });
+  
+    promise.catch((err) => {
+      res.status(500).send(err.message);
+    });
 })
 
 app.get("/messages", (req, res) => {
