@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 dotenv.config();
 
-//Conexão com o Banco (é sempre igual essa conexão basta copiar):
+//Conexão com o Banco:
 const mongoClient = new MongoClient(process.env.DATABASE_URL);
 let db;
 
@@ -31,6 +31,13 @@ const participantSchema = joi.object({
     name: joi.string().required(),
 });
 
+const messageSchema = joi.object({
+  to: joi.string().required(),
+  text: joi.string().required(),
+  type: joi.string().regex(/^(message|private_message)$/).required(),
+  from: joi.required()
+});
+
 
 // Funções (endpoints):
 app.post("/participants", async (req, res) => {
@@ -45,11 +52,11 @@ app.post("/participants", async (req, res) => {
     return res.status(422).send(errors);
   }
 
-  try{
+  try {
   const participantExistsInParticipants = await db.collection("participants").findOne({ name });
 
   if(participantExistsInParticipants) {
-    return res.status(409).send("Já existe um participante com o mesmo nome!");
+    return res.sendStatus(409);
   }
 
     const newParticipant = { name, lastStatus: Date.now() };
@@ -84,38 +91,29 @@ app.get("/participants", async (req, res) => {
 app.post("/messages", async (req, res) => {
   const { to, text, type } = req.body;
   const User = req.headers.user;
-  console.log("User aqui:", User);
+
+  const postMessage = { to: to, text: text, type: type, from: User }
+
+  const validation = messageSchema.validate(postMessage, { abortEarly: false });
+
+  if (validation.error) {
+    const errors = validation.error.details.map((detail) => detail.message);
+    return res.status(422).send(errors);
+  }
 
   try {
-    if (!to || to === "" || !text || text === "") {
-      return res
-        .status(422)
-        .send("O to ta string vazia ou o text tá string vazia");
-    }
-    if (!type || (type !== "private_message" && type !== "message")) {
-      return res
-        .status(422)
-        .send("type é diferente de message e de private_message");
-    }
-    if (!User) {
-      return res.status(422).send("O cabeçalho 'user' é obrigatório.");
-    }
-
     const contatoExistente = await db
       .collection("participants")
       .findOne({ name: User });
 
     if (!contatoExistente) {
-      return res
-        .status(422)
-        .send(
-          "O participante do cabeçalho 'user' não consta na lista de participantes."
-        );
+      return res.sendStatus(422)
     }
 
     const newMessage = { to, text, type, from: User, time: timeFormat };
     await db.collection("messages").insertOne(newMessage);
     res.sendStatus(201);
+
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -128,11 +126,7 @@ app.get("/messages", async (req, res) => {
    const limit = Number(req.query.limit);
 
   if (req.query.limit && (isNaN(limit) || limit < 1)) {
-    return res
-      .status(422)
-      .send(
-        "Caso o limite seja um valor inválido (0, negativo ou string não numérica)"
-      );
+    return res.sendStatus(422)
   }
 
   try {
@@ -159,20 +153,19 @@ app.get("/messages", async (req, res) => {
   }
 });
 
-
 app.post("/status", async (req, res) => {
 
   const User = req.headers.user;
 
   if (!User) {
-    return res.status(404).send("O cabeçalho 'user' é obrigatório.");
+    return res.sendStatus(404);
   }
 
   try {
     const participantExistsInStatus = await db.collection("participants").findOne({ name: User });
 
     if(!participantExistsInStatus) {
-        return res.status(404).send("O participante do cabeçalho 'user' não consta na lista de participantes.")
+      return res.sendStatus(404);
     }
 
     await db.collection("participants").findOneAndUpdate({ name: User }, { $set: { lastStatus: Date.now() } });
@@ -185,6 +178,7 @@ app.post("/status", async (req, res) => {
   }
 });
 
+ // Removing Inactive Participants: 
   setInterval(async () => {
     const participants = await db.collection("participants");
 
