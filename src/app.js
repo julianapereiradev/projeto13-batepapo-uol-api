@@ -54,6 +54,7 @@ app.post("/participants", async (req, res) => {
 
     const newParticipant = { name, lastStatus: Date.now() };
     await db.collection("participants").insertOne(newParticipant);
+    
     const mensagem = {
         from: name,
         to: "Todos",
@@ -122,6 +123,7 @@ app.post("/messages", async (req, res) => {
 
 
 app.get("/messages", async (req, res) => {
+   const User = req.headers.user;
    const limit = Number(req.query.limit);
 
   if (req.query.limit && (isNaN(limit) || limit < 1)) {
@@ -133,7 +135,14 @@ app.get("/messages", async (req, res) => {
   }
 
   try {
-    const data = await db.collection("messages").find().toArray();
+
+    const data = await db.collection("messages").find({
+      $or: [
+          { to: User },
+          { from: User },
+          { to: "Todos" }
+      ]
+    }).toArray()
 
     if(limit) {
         return res.send(data.slice(-limit))
