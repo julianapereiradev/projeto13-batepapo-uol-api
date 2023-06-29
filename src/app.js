@@ -124,6 +124,7 @@ app.post("/messages", async (req, res) => {
 
 app.get("/messages", async (req, res) => {
    const User = req.headers.user;
+
    const limit = Number(req.query.limit);
 
   if (req.query.limit && (isNaN(limit) || limit < 1)) {
@@ -196,12 +197,14 @@ app.post("/status", async (req, res) => {
         const mensagem = {
           from: participant.name,
           to: "Todos",
-          text: "saiu da sala...",
+          text: "sai da sala...",
           type: "status",
           time: timeFormat,
         };
 
         await db.collection("messages").insertOne(mensagem);
+
+        console.log("Mensagem de saída registrada:", mensagem);
       }
     });
   }, 15000);
