@@ -140,7 +140,9 @@ app.get("/messages", async (req, res) => {
       $or: [
           { to: User },
           { from: User },
-          { to: "Todos" }
+          { to: "Todos" },
+          { type: "status" },
+          { type: "message"}
       ]
     }).toArray()
 
@@ -181,6 +183,28 @@ app.post("/status", async (req, res) => {
     res.status(500).send(err.message)
   }
 });
+
+  setInterval(async () => {
+    const participants = await db.collection("participants");
+
+    participants.find().forEach(async (participant) => {
+      const lastStatusPlus10Seconds = participant.lastStatus + 10000;
+
+      if (lastStatusPlus10Seconds < Date.now()) {
+        await participants.deleteOne({ _id: participant._id });
+
+        const mensagem = {
+          from: participant.name,
+          to: "Todos",
+          text: "saiu da sala...",
+          type: "status",
+          time: timeFormat,
+        };
+
+        await db.collection("messages").insertOne(mensagem);
+      }
+    });
+  }, 15000);
 
 
 // Ligar a aplicação do servidos para ouvir as requisições:
