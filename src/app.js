@@ -179,8 +179,6 @@ app.delete("/messages/:ID_DA_MENSAGEM", async (req, res) => {
   }
 });
 
-
-
 app.post("/status", async (req, res) => {
 
   const User = req.headers.user;
@@ -207,29 +205,29 @@ app.post("/status", async (req, res) => {
 });
 
  // Removing Inactive Participants: 
-  // setInterval(async () => {
-  //   const participants = await db.collection("participants");
+  setInterval(async () => {
+    const participants = await db.collection("participants");
 
-  //   participants.find().forEach(async (participant) => {
-  //     const lastStatusPlus10Seconds = participant.lastStatus + 10000;
+    participants.find().forEach(async (participant) => {
+      const lastStatusPlus10Seconds = participant.lastStatus + 10000;
 
-  //     if (lastStatusPlus10Seconds < Date.now()) {
-  //       await participants.deleteOne({ _id: participant._id });
+      if (lastStatusPlus10Seconds < Date.now()) {
+        await participants.deleteOne({ _id: participant._id });
 
-  //       const mensagem = {
-  //         from: participant.name,
-  //         to: "Todos",
-  //         text: "sai da sala...",
-  //         type: "status",
-  //         time: timeFormat,
-  //       };
+        const mensagem = {
+          from: participant.name,
+          to: "Todos",
+          text: "sai da sala...",
+          type: "status",
+          time: timeFormat,
+        };
 
-  //       await db.collection("messages").insertOne(mensagem);
+        await db.collection("messages").insertOne(mensagem);
 
-  //       console.log("Mensagem de saída registrada:", mensagem);
-  //     }
-  //   });
-  // }, 15000);
+        console.log("Mensagem de saída registrada:", mensagem);
+      }
+    });
+  }, 15000);
 
 
 // Ligar a aplicação do servidos para ouvir as requisições:
