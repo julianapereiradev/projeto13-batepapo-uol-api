@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import dayjs from "dayjs";
 import joi from 'joi'
@@ -119,7 +119,6 @@ app.post("/messages", async (req, res) => {
   }
 });
 
-
 app.get("/messages", async (req, res) => {
    const User = req.headers.user;
 
@@ -153,6 +152,35 @@ app.get("/messages", async (req, res) => {
   }
 });
 
+
+app.delete("/messages/:ID_DA_MENSAGEM", async (req, res) => {
+  const User = req.headers.user;
+  const { ID_DA_MENSAGEM } = req.params;
+
+  try {
+    const message = await db.collection("messages").findOne({
+      _id: new ObjectId(ID_DA_MENSAGEM)
+    });
+
+    if (!message) {
+      return res.sendStatus(404);
+    }
+
+    if (message.from !== User) {
+      return res.sendStatus(401);
+    }
+
+    await db.collection("messages").deleteOne({ _id: new ObjectId(ID_DA_MENSAGEM) });
+
+     return res.sendStatus(204);;
+
+  } catch (err) {
+    return res.status(500).send(err.message);
+  }
+});
+
+
+
 app.post("/status", async (req, res) => {
 
   const User = req.headers.user;
@@ -179,29 +207,29 @@ app.post("/status", async (req, res) => {
 });
 
  // Removing Inactive Participants: 
-  setInterval(async () => {
-    const participants = await db.collection("participants");
+  // setInterval(async () => {
+  //   const participants = await db.collection("participants");
 
-    participants.find().forEach(async (participant) => {
-      const lastStatusPlus10Seconds = participant.lastStatus + 10000;
+  //   participants.find().forEach(async (participant) => {
+  //     const lastStatusPlus10Seconds = participant.lastStatus + 10000;
 
-      if (lastStatusPlus10Seconds < Date.now()) {
-        await participants.deleteOne({ _id: participant._id });
+  //     if (lastStatusPlus10Seconds < Date.now()) {
+  //       await participants.deleteOne({ _id: participant._id });
 
-        const mensagem = {
-          from: participant.name,
-          to: "Todos",
-          text: "sai da sala...",
-          type: "status",
-          time: timeFormat,
-        };
+  //       const mensagem = {
+  //         from: participant.name,
+  //         to: "Todos",
+  //         text: "sai da sala...",
+  //         type: "status",
+  //         time: timeFormat,
+  //       };
 
-        await db.collection("messages").insertOne(mensagem);
+  //       await db.collection("messages").insertOne(mensagem);
 
-        console.log("Mensagem de saída registrada:", mensagem);
-      }
-    });
-  }, 15000);
+  //       console.log("Mensagem de saída registrada:", mensagem);
+  //     }
+  //   });
+  // }, 15000);
 
 
 // Ligar a aplicação do servidos para ouvir as requisições:
