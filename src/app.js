@@ -4,6 +4,7 @@ import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import dayjs from "dayjs";
 import joi from 'joi'
+import {stripHtml} from 'string-strip-html'
 
 // Crianção do app:
 const app = express();
@@ -59,11 +60,14 @@ app.post("/participants", async (req, res) => {
     return res.sendStatus(409);
   }
 
-    const newParticipant = { name, lastStatus: Date.now() };
+    const stripName = stripHtml(name).result.trim();
+
+    const newParticipant = { name: stripName, lastStatus: Date.now() };
+    
     await db.collection("participants").insertOne(newParticipant);
     
     const mensagem = {
-        from: name,
+        from: stripName,
         to: "Todos",
         text: "entra na sala...",
         type: "status",
@@ -110,7 +114,11 @@ app.post("/messages", async (req, res) => {
       return res.sendStatus(422)
     }
 
-    const newMessage = { to, text, type, from: User, time: timeFormat };
+    const stripTo = stripHtml(to).result.trim();
+    const stripText = stripHtml(text).result.trim();
+    const stripType = stripHtml(type).result.trim();
+
+    const newMessage = { to: stripTo, text: stripText, type: stripType, from: User, time: timeFormat };
     await db.collection("messages").insertOne(newMessage);
     res.sendStatus(201);
 
