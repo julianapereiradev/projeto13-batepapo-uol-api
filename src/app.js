@@ -199,7 +199,7 @@ app.put("/messages/:ID_DA_MENSAGEM", async (req, res) => {
       .findOne({ name: User });
 
     if (!contatoExistente) {
-      return res.status(422).send("Deve ser um participante existente na lista de participantes.")
+      return res.sendStatus(422)
     }
 
 
@@ -208,11 +208,11 @@ app.put("/messages/:ID_DA_MENSAGEM", async (req, res) => {
     });
 
     if (!message) {
-      return res.status(404).send("O id não foi encontrado");
+      return res.sendStatus(404);
     }
 
     if (message.from !== User) {
-      return res.status(401).send("O usuário do header não é o dono dessa mensagem");
+      return res.sendStatus(401);
     }
 
 
@@ -222,7 +222,7 @@ app.put("/messages/:ID_DA_MENSAGEM", async (req, res) => {
 		)
 
 		if (result.matchedCount === 0) {
-     return res.status(404).send("Esse item não existe!")
+     return res.sendStatus(404)
     }
 
 
@@ -230,10 +230,7 @@ app.put("/messages/:ID_DA_MENSAGEM", async (req, res) => {
 
   } catch (err) {
     res.status(500).send(err.message);
-    console.log('erro aqui:',err.message)
   }
-
-
 });
 
 app.post("/status", async (req, res) => {
@@ -262,30 +259,29 @@ app.post("/status", async (req, res) => {
 });
 
  // Removing Inactive Participants: 
+  setInterval(async () => {
+    const participants = await db.collection("participants");
 
-  // setInterval(async () => {
-  //   const participants = await db.collection("participants");
+    participants.find().forEach(async (participant) => {
+      const lastStatusPlus10Seconds = participant.lastStatus + 10000;
 
-  //   participants.find().forEach(async (participant) => {
-  //     const lastStatusPlus10Seconds = participant.lastStatus + 10000;
+      if (lastStatusPlus10Seconds < Date.now()) {
+        await participants.deleteOne({ _id: participant._id });
 
-  //     if (lastStatusPlus10Seconds < Date.now()) {
-  //       await participants.deleteOne({ _id: participant._id });
+        const mensagem = {
+          from: participant.name,
+          to: "Todos",
+          text: "sai da sala...",
+          type: "status",
+          time: timeFormat,
+        };
 
-  //       const mensagem = {
-  //         from: participant.name,
-  //         to: "Todos",
-  //         text: "sai da sala...",
-  //         type: "status",
-  //         time: timeFormat,
-  //       };
+        await db.collection("messages").insertOne(mensagem);
 
-  //       await db.collection("messages").insertOne(mensagem);
-
-  //       console.log("Mensagem de saída registrada:", mensagem);
-  //     }
-  //   });
-  // }, 15000);
+        console.log("Mensagem de saída registrada:", mensagem);
+      }
+    });
+  }, 15000);
 
 
 // Ligar a aplicação do servidos para ouvir as requisições:
