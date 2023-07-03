@@ -179,6 +179,63 @@ app.delete("/messages/:ID_DA_MENSAGEM", async (req, res) => {
   }
 });
 
+app.put("/messages/:ID_DA_MENSAGEM", async (req, res) => {
+  const User = req.headers.user;
+  const { ID_DA_MENSAGEM } = req.params;
+  const { to, text, type } = req.body;
+
+  const putMessage = { to: to, text: text, type: type, from: User }
+
+  const validation = messageSchema.validate(putMessage, { abortEarly: false });
+
+  if (validation.error) {
+    const errors = validation.error.details.map((detail) => detail.message);
+    return res.status(422).send(errors);
+  }
+
+  try {
+    const contatoExistente = await db
+      .collection("participants")
+      .findOne({ name: User });
+
+    if (!contatoExistente) {
+      return res.status(422).send("Deve ser um participante existente na lista de participantes.")
+    }
+
+
+    const message = await db.collection("messages").findOne({
+      _id: new ObjectId(ID_DA_MENSAGEM)
+    });
+
+    if (!message) {
+      return res.status(404).send("O id não foi encontrado");
+    }
+
+    if (message.from !== User) {
+      return res.status(401).send("O usuário do header não é o dono dessa mensagem");
+    }
+
+
+    const result = await db.collection("messages").updateOne(
+			{ _id: new ObjectId(ID_DA_MENSAGEM) },
+			{ $set: { to, text, type } }
+		)
+
+		if (result.matchedCount === 0) {
+     return res.status(404).send("Esse item não existe!")
+    }
+
+
+		res.send("Mensagem atualizada!")
+
+  } catch (err) {
+    res.status(500).send(err.message);
+    console.log('erro aqui:',err.message)
+  }
+
+
+});
+
 app.post("/status", async (req, res) => {
 
   const User = req.headers.user;
@@ -205,29 +262,30 @@ app.post("/status", async (req, res) => {
 });
 
  // Removing Inactive Participants: 
-  setInterval(async () => {
-    const participants = await db.collection("participants");
 
-    participants.find().forEach(async (participant) => {
-      const lastStatusPlus10Seconds = participant.lastStatus + 10000;
+  // setInterval(async () => {
+  //   const participants = await db.collection("participants");
 
-      if (lastStatusPlus10Seconds < Date.now()) {
-        await participants.deleteOne({ _id: participant._id });
+  //   participants.find().forEach(async (participant) => {
+  //     const lastStatusPlus10Seconds = participant.lastStatus + 10000;
 
-        const mensagem = {
-          from: participant.name,
-          to: "Todos",
-          text: "sai da sala...",
-          type: "status",
-          time: timeFormat,
-        };
+  //     if (lastStatusPlus10Seconds < Date.now()) {
+  //       await participants.deleteOne({ _id: participant._id });
 
-        await db.collection("messages").insertOne(mensagem);
+  //       const mensagem = {
+  //         from: participant.name,
+  //         to: "Todos",
+  //         text: "sai da sala...",
+  //         type: "status",
+  //         time: timeFormat,
+  //       };
 
-        console.log("Mensagem de saída registrada:", mensagem);
-      }
-    });
-  }, 15000);
+  //       await db.collection("messages").insertOne(mensagem);
+
+  //       console.log("Mensagem de saída registrada:", mensagem);
+  //     }
+  //   });
+  // }, 15000);
 
 
 // Ligar a aplicação do servidos para ouvir as requisições:
